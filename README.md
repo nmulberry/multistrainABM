@@ -4,7 +4,7 @@ An agent-based model for multistrain dynamics inspired by the pneumococcus. The 
 
 
 ## Compiling the model
-First, clone [ode_event_solver](https://github.com/nmulberry/ode_event_solver) and update the path to this package in `Cargo.toml`.
+First, clone [ODE-event-solvers](https://github.com/nmulberry/ode-event-solvers) and update the path to this package in `Cargo.toml`.
 Now you should be able to compile using cargo:
 ```
     cargo build --release
