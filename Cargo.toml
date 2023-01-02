@@ -1,0 +1,24 @@
+[package]
+name = "multiabm"
+version = "0.0.1"
+
+[[bin]]
+name="multiabm_samplestrains"
+path="src/bin/sampled.rs"
+
+#[[bin]] # using alternate observer func
+#name="multiabm_trajectories"
+#path="src/bin/host.rs"
+
+
+[dependencies]
+csv = "*"
+nalgebra="0.30.1"
+serde = "1"
+serde_derive = "1"
+rand_distr= "0.4.3"
+rand="0.8.5"
+ode_event_solver = { path= "../ode_event_solver" }
+rand_pcg = "0.3.1"
+
+
