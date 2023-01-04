@@ -1,4 +1,4 @@
-extern crate ode_event_solver;
+extern crate ode-event-solvers;
 use ode_event_solver::*;
 extern crate rand;
 extern crate rand_distr; 
