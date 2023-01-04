@@ -34,7 +34,7 @@ type State = DVector<f64>;
 type Time = f64;
 
 // Within Host Model for arbitrary number of strains and hosts
-impl ode_event_solver::System<State> for WhCompetition {
+impl ode-event-solvers::System<State> for WhCompetition {
     fn ode(&self, _: Time, y: &State, dy: &mut State) {
       for k in 0..(self.nhost) {
         // For each strain in host:
