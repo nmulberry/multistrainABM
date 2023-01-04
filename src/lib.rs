@@ -1,5 +1,5 @@
 extern crate ode-event-solvers;
-use ode_event_solver::*;
+use ode-event-solvers::*;
 extern crate rand;
 extern crate rand_distr; 
 use rand_distr::{Bernoulli, Poisson, Distribution};
