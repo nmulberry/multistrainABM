@@ -18,7 +18,7 @@ serde = "1"
 serde_derive = "1"
 rand_distr= "0.4.3"
 rand="0.8.5"
-ode_event_solver = { path= "../ode-event-solvers" }
+ode_event_solvers = { path= "../ode-event-solvers" }
 rand_pcg = "0.3.1"
 
 

@@ -1,5 +1,5 @@
-extern crate ode-event-solvers;
-use ode-event-solvers::*;
+extern crate ode_event_solvers;
+use ode_event_solvers::*;
 extern crate rand;
 extern crate rand_distr; 
 use rand_distr::{Bernoulli, Poisson, Distribution};
@@ -34,7 +34,7 @@ type State = DVector<f64>;
 type Time = f64;
 
 // Within Host Model for arbitrary number of strains and hosts
-impl ode-event-solvers::System<State> for WhCompetition {
+impl ode_event_solvers::System<State> for WhCompetition {
     fn ode(&self, _: Time, y: &State, dy: &mut State) {
       for k in 0..(self.nhost) {
         // For each strain in host:

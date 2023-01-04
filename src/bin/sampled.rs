@@ -8,9 +8,9 @@ extern crate rand_distr;
 use rand_distr::{Bernoulli, Distribution};
 extern crate multiabm; // load library with model defn
 use multiabm::*;
-extern crate ode_event_solver;
-use ode_event_solver::euler::*;
-use ode_event_solver::*;
+extern crate ode_event_solvers;
+use ode_event_solvers::euler::*;
+use ode_event_solvers::*;
 use std::env;
 //========================================================//
 /*                 SETUP                                  */
