@@ -37,8 +37,8 @@ sens_res_pal <- c("strain 2"="#E69F00","strain 1"="#56B4E9")
 vax_pal <- c("#FEE0B6", "#8073AC")
 
 ## Model defn
-multiabm <- "~/RustyMultistrain/target/release/multiabm_samplestrains"
-multiabm_trajectories <- "~/RustyMultistrain/target/release/multiabm_trajectories"
+multiabm <- "~/multistrainABM/target/release/multiabm_samplestrains"
+multiabm_trajectories <- "~/multistrainABM/target/release/multiabm_trajectories"
 # Usage: (assuming working directory has const_pars.csv, strain_pars.csv)
 # multiabm seed sero_pars.csv res_pars.csv
 
