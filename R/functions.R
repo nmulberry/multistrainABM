@@ -9,6 +9,7 @@ setup_sim_dir <- function(nstrain, # number of strains
                           rt, # nstrain x 1 array of resistant types (binary-values)
                           mt,  # nstrain x 1 array of metabolic types (integer-values)
                           vt, # nstrain x 1 array of vaccine types (*BY SERO*)
+                          gt, #nstrain x1 array of sero groups (*BY SERO*)
                           t_max, # max simulation time
                           t_vax, # vaccination time
                           beta=0.5, # bwh transmission rate
@@ -17,6 +18,7 @@ setup_sim_dir <- function(nstrain, # number of strains
                           eps_a=0.02, # immune decay rate
                           rho=0.01, # minimum wh pathogen density
                           mu=0.00, # host migration rate
+                          k_g=0.1, # within sero-group cross-immunity
                           theta=70
   ){
   #----- check input-----#
@@ -36,8 +38,8 @@ setup_sim_dir <- function(nstrain, # number of strains
   }
   # ------SETUP-------#
   write_constant_pars(nstrain=nstrain,nhost=nhost,t_max=t_max,t_vax=t_vax,
-    kappa=kappa,eps_x=eps_x, eps_a=eps_a, rho=rho,theta=theta,mu=mu,beta=beta)
-  write_strain_pars(nstrain=nstrain,strain_id=strain_id,st=st,mt=mt,rt=rt,vt=vt)
+    kappa=kappa,eps_x=eps_x, eps_a=eps_a, rho=rho,theta=theta,mu=mu,k_g=k_g,beta=beta)
+  write_strain_pars(nstrain=nstrain,strain_id=strain_id,st=st,mt=mt,rt=rt,vt=vt, gt=gt)
 }
 
 ## Run for a single host
@@ -137,7 +139,6 @@ run_simulations <- function(res_file,sero_file,niter,label="None"){
        ~ sim(.x),   
        .progress=TRUE) 
     res$label <- label
-
     return(res)
   }
 }
@@ -176,7 +177,9 @@ run_2strain <- function(
   t_max, 
   t_vax,
   vt1=0,
-  vt2=0
+  vt2=0,
+  gt1=1,
+  gt2=1
 ){
 
   if (comp_type == "Antigenic" | comp_type == "Both"){
@@ -201,10 +204,12 @@ run_2strain <- function(
       rt=c(rt1,rt2), 
       mt=mt,
       vt=c(vt1,vt2), 
+      gt=c(gt1,gt2),
       t_max=t_max,
       t_vax=t_vax,
       beta=BETA,
-      mu=MU)
+      mu=MU,
+      k_g=CROSS)
   
   write_res_pars(p_tau=p_tau,cost_res=cost,tau=tau,fname_res=res_file)
   write_sero_pars(alpha=alpha,fname_sero=sero_file)
@@ -254,7 +259,10 @@ run_3strain <- function(
   t_vax,
   vt1=0,
   vt2=0,
-  vt3=0
+  vt3=0,
+  gt1=1,
+  gt2=1,
+  gt3=1
 ){
 
   if (comp_type == "Metabolic"){
@@ -271,10 +279,12 @@ run_3strain <- function(
       rt=c(rt1,rt2,rt3), 
       mt=mt,
       vt=c(vt1,vt2,vt3), 
+      gt=c(gt1,gt2,gt3),
       t_max=t_max,
       t_vax=t_vax,
       beta=BETA,
-      mu=MU)
+      mu=MU,
+      k_g=CROSS)
   
   write_res_pars(p_tau=p_tau,cost_res=cost,tau=tau,fname_res=res_file)
   write_sero_pars(alpha=c(alpha1,alpha2),fname_sero=sero_file)
@@ -319,7 +329,7 @@ plot_trajectories <- function(dat, plot_by="strain", with_total=FALSE, plot_rel_
             p95 = quantile(y, prob=0.95))
    dat$id_s <- factor(dat$id_s)
     gg <- ggplot(dat, aes(x=time/365))+
-          geom_line(aes(y=p50, col=id_s, group=id_s), size=1.5)+
+          geom_line(aes(y=p50, col=id_s, group=id_s), linewidth=1.5)+
           geom_ribbon(aes(ymin=p05, ymax=p95, fill=id_s, group=id_s), alpha=0.3)+
           facet_wrap(~label)+
         guides(fill="none")
@@ -334,7 +344,7 @@ plot_trajectories <- function(dat, plot_by="strain", with_total=FALSE, plot_rel_
             p95 = quantile(y, prob=0.95))
    dat$id_r <- factor(dat$id_r)
     gg <- ggplot(dat, aes(x=time/365))+
-          geom_line(aes(y=p50, col=id_r, group=id_r), size=1.5)+
+          geom_line(aes(y=p50, col=id_r, group=id_r), linewidth=1.5)+
           geom_ribbon(aes(ymin=p05, ymax=p95, fill=id_r, group=id_r), alpha=0.3)+
           facet_wrap(~label)+
         guides(fill="none")
@@ -345,7 +355,7 @@ plot_trajectories <- function(dat, plot_by="strain", with_total=FALSE, plot_rel_
           p05 = quantile(y, prob=0.05),
           p95 = quantile(y, prob=0.95)) %>%
       ggplot(aes(x=time/365))+
-        geom_line(aes(y=p50, col=id), size=1.5)+
+        geom_line(aes(y=p50, col=id), linewidth=1.5)+
         geom_ribbon(aes(ymin=p05, ymax=p95, fill=id), alpha=0.3)+
         facet_wrap(~label)+
       guides(fill="none")
@@ -359,7 +369,7 @@ plot_trajectories <- function(dat, plot_by="strain", with_total=FALSE, plot_rel_
             p05 = quantile(tot_freq, prob=0.05),
             p95 = quantile(tot_freq, prob=0.95))
       gg <- gg + 
-        geom_line(data=dat, aes(x=time/365, y=p50), size=1.5, linetype="dashed")
+        geom_line(data=dat, aes(x=time/365, y=p50), linewidth=1.5, linetype="dashed")
     }
   }
   
@@ -449,10 +459,11 @@ write_constant_pars <- function(nstrain, # number of strains
                                 eps_a, # immune decay rate
                                 rho, # minimum wh pathogen density
                                 theta,
-                                mu){#migration rate
+                                mu,#migration rate
+                                k_g){ #cross-immunity
     const_pars <- data.frame(t_max=t_max, t_vax=t_vax,
       nhost=nhost, nstrain=nstrain, kappa=kappa, beta=beta, theta=theta, eps_x=eps_x,
-      eps_a=eps_a, rho=rho, mu=mu)
+      eps_a=eps_a, rho=rho, mu=mu, k_g=k_g)
     # Note: multiabm_samplestrains will look for a file called "const_pars.csv" in the working directory
     write.table(const_pars, "const_pars.csv", row.names=FALSE, sep=",")
 }
@@ -473,12 +484,13 @@ write_sero_pars <- function(alpha, #nsero x 1 array
 
 write_strain_pars <- function(nstrain,
                               strain_id,
-                              st,
-                              rt,
-                              mt,
-                              vt){
+                              st, #serotype
+                              rt, #resistance type
+                              mt, #metabolic type/sequence type
+                              vt, #vaccine type
+                              gt){ #sero group
   # Check that 
-  strain_pars <- data.frame(id_m=mt, id_s=st, id_r=rt, id_v=vt)
+  strain_pars <- data.frame(id_m=mt, id_s=st, id_r=rt, id_v=vt, id_g=gt)
   # Note: multiabm_samplestrains will look for a file called "strain_pars.csv" in working directory
   write.table(strain_pars, "strain_pars.csv", row.names=FALSE, sep=",")
 }

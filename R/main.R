@@ -13,6 +13,7 @@ T_VAX=10*365
 NITER <- no_cores*3
 BETA <- 0.1
 MU <- 0.0
+CROSS <- 0.0 # cross-immunity for initial runs
 dir.create("tmp", showWarnings=FALSE) #for storing temp files
 #--------------------------#
 #--------------------------#

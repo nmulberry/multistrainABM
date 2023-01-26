@@ -4,7 +4,6 @@ extern crate rand;
 extern crate rand_distr; 
 use rand_distr::{Bernoulli, Poisson, Distribution};
 use rand::distributions::WeightedIndex;
-use rand::{Rng, SeedableRng, rngs::StdRng};
 use rand::seq::index::sample;
 
 //========================================================//
@@ -24,9 +23,11 @@ pub struct WhCompetition {
   pub id_m: Vec<u64>,
   pub id_s: Vec<u64>,
   pub id_r: Vec<u64>,
+	pub id_g: Vec<u64>,
   pub p_treat: Bernoulli, 
   pub beta: f64,
   pub mu: f64,
+  pub k_g: f64,
   pub on_treat: Vec<bool>, 
 }
 
@@ -52,6 +53,8 @@ impl ode_event_solvers::System<State> for WhCompetition {
              }
              if s_i==self.id_s[j] {
                ss += y[k*self.nstrain+j];
+             } else if  self.id_g[i]==self.id_g[j] {// within sero group cross immunity
+               ss += self.k_g*y[k*self.nstrain+j];
              }
             }
            m[i] = mm;
@@ -84,7 +87,7 @@ impl ode_event_solvers::System<State> for WhCompetition {
   fn event(&mut self, _: Time, y: &State, dy: &mut State) {//abs freq
     // ynew = y + dy
     // Get carriage by strain. If density < rho, set to 0.
-    let migrate_dist = Bernoulli::new(self.mu).unwrap(); // 1% per day
+   // let migrate_dist = Bernoulli::new(self.mu).unwrap(); 
     let mut n_infected:Vec<f64> = vec![0.0; self.nstrain];
     for k in 0..self.nhost {
       // get carriage

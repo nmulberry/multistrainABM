@@ -3,7 +3,6 @@ extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 extern crate rand;
-use rand::{Rng, SeedableRng, rngs::StdRng};
 extern crate rand_distr; 
 use rand_distr::{Bernoulli, Distribution};
 extern crate multiabm; // load library with model defn
@@ -91,6 +90,7 @@ struct ConstParameters {
   eps_a: f64,
   rho: f64,
   mu: f64,
+  k_g: f64,
 }
 
 impl ConstParameters {
@@ -107,6 +107,7 @@ impl ConstParameters {
       eps_a: 0.0,
       rho: 0.0,
       mu: 0.0,
+      k_g: 0.0,
     }
   }
 
@@ -115,7 +116,7 @@ impl ConstParameters {
     let mut df = ConstParameters::new();
     let header = csv::StringRecord::from(vec![
         "t_max", "t_vax", "nhost", "nstrain", "kappa", "beta", 
-        "theta", "eps_x", "eps_a", "rho", "mu",
+        "theta", "eps_x", "eps_a", "rho", "mu", "k_g",
     ]);
     for result in rdr.records() {
       df = result.unwrap().deserialize(Some(&header)).unwrap()
@@ -130,6 +131,7 @@ struct StrainParameters {
   id_s: Vec<u64>,
   id_r: Vec<u64>,
   id_v: Vec<u64>,
+  id_g: Vec<u64>,
 }
 
 impl StrainParameters {
@@ -139,6 +141,7 @@ impl StrainParameters {
       id_s: Vec::new(),
       id_r: Vec::new(),
       id_v: Vec::new(),
+      id_g: Vec::new(),
      }
   }
 
@@ -147,6 +150,7 @@ impl StrainParameters {
     self.id_s.push(row[1].parse().unwrap());
     self.id_r.push(row[2].parse().unwrap());
     self.id_v.push(row[3].parse().unwrap());
+	self.id_g.push(row[4].parse().unwrap());
   }
 
   fn read_csv(filepath: &str) -> Self {
@@ -219,9 +223,11 @@ fn main() {
       id_m: strain_pars.id_m,
       id_s: strain_pars.id_s,
       id_r: strain_pars.id_r,
+      id_g: strain_pars.id_g.clone(),
       p_treat: treat_dist, 
       beta: pars.beta,
       mu: pars.mu,
+      k_g: pars.k_g,
       on_treat: init_on_treat,
     }; 
    /* SOLVE SYSTEM */
@@ -235,7 +241,20 @@ fn main() {
       // add vaccine (growth rate to zero--> instable to bump up a)
       for j in 0..pars.nstrain {
         if strain_pars.id_v[j] == 1 {
-          kappa_vec[j] = 0.0;
+         // kappa_vec[j] = 0.0;
+           for k in 0..pars.nhost {// vax all hosts for now
+            y0[k*pars.nstrain + pars.nhost*pars.nstrain+j] += 25.0;
+          }
+        } else {//super convoluted cross immunity
+        	for h in 0..pars.nstrain {        		
+        		if strain_pars.id_g[j] == strain_pars.id_g[h] {
+        			if strain_pars.id_v[h] == 1 {
+		      			for k in 0..pars.nhost {// vax all hosts for now
+		          		y0[k*pars.nstrain + pars.nhost*pars.nstrain+j] += pars.k_g*25.0;
+		        		}
+        			}
+        		}
+        	}        
         }
       }
       system.kappa = kappa_vec;
