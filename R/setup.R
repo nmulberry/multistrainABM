@@ -20,7 +20,9 @@ source('functions.R')
 # furrr options
 no_cores <- availableCores() 
 plan(multicore, workers = no_cores)
- 
+##make output dir
+out_dir <- "./figures"
+dir.create(out_dir, showWarnings = FALSE)
 
 # ggplot style
 tsize <- 16
@@ -38,9 +40,7 @@ vax_pal <- c("#FEE0B6", "#8073AC")
 
 ## Model defn
 multiabm <- "~/multistrainABM/target/release/multiabm_samplestrains"
-multiabm_trajectories <- "~/multistrainABM/target/release/multiabm_trajectories"
-# Usage: (assuming working directory has const_pars.csv, strain_pars.csv)
-# multiabm seed sero_pars.csv res_pars.csv
+
 
 
 ## R model for illustrating wh dynamics only
