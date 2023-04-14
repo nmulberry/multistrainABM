@@ -15,6 +15,7 @@ pub struct WhCompetition {
   pub nhost: usize,
   pub nstrain: usize,
   pub theta: f64,
+  pub tau: f64,
   pub eps_x: f64,
   pub eps_a: f64,
   pub rho: f64,
@@ -22,8 +23,10 @@ pub struct WhCompetition {
   pub kappa: Vec<f64>,
   pub id_m: Vec<u64>,
   pub id_s: Vec<u64>,
-  pub id_o: Vec<u64>,
+  pub id_r: Vec<u64>,
   pub beta: f64,
+  pub p_treat: Bernoulli,
+  pub on_treat: Vec<bool>,
   pub t_g: f64,
   pub t_l: f64,
 }
@@ -63,6 +66,12 @@ impl ode_event_solvers::System<State> for WhCompetition {
           dy[ii] = y[ii]*(1.0-m[j])*self.kappa[j]- 
                     y[ii]*y[jj]*self.alpha[j]-
                     y[ii]*self.eps_x; 
+        
+         if self.on_treat[k] {
+            if self.id_r[j] == 0 {
+              dy[ii] = dy[ii] - y[ii]*self.tau;
+            }        
+          }
 
           // immunity
           dy[jj] = s[j]*s[j]/(self.rho*self.rho+s[j]*s[j])-
@@ -104,6 +113,7 @@ impl ode_event_solvers::System<State> for WhCompetition {
         let n_transmit = transmit_dist.sample(&mut rand::thread_rng());
         let recip = sample(&mut rand::thread_rng(), self.nhost, n_transmit as usize);
         for r in recip {
+           self.on_treat[r] = self.p_treat.sample(&mut rand::thread_rng());
            dy[r*self.nstrain+j] += self.rho;             
         }
       }
@@ -122,35 +132,93 @@ impl ode_event_solvers::System<State> for WhCompetition {
                if y[ii2] > self.rho {
                   // co-colonization 
                   if self.id_s[j] != self.id_s[j2] {
-                  // potential capsular switch
-                  let caps_switch = caps_switch_dist.sample(&mut rand::thread_rng());
-                  if caps_switch {
-                    // create new recombinant strain in this host
-                    // find which strain(note: wont be transmitted this day)
-                    // sero from j, all other traits from j2
-                    let ind1 = self.id_s
-                          .iter()
-                          .enumerate()
-                          .filter(|(_, &r)| r == self.id_s[j])
-                          .map(|(index, _)| index)
-                          .collect::<Vec<_>>();
-                    let ind2 = self.id_m
-                          .iter()
-                          .enumerate()
-                          .filter(|(_, &r)| r == self.id_m[j2])
-                          .map(|(index, _)| index)
-                          .collect::<Vec<_>>();
-                    let ind3 = self.id_o
-                          .iter()
-                          .enumerate()
-                          .filter(|(_, &r)| r == self.id_o[j2])
-                          .map(|(index, _)| index)
-                          .collect::<Vec<_>>();
+                    // potential capsular switch
+                    let caps_switch = caps_switch_dist.sample(&mut rand::thread_rng());
+                    if caps_switch {
+                      // create new recombinant strain in this host
+                      // find which strain(note: wont be transmitted this day)
+                      // sero from j, all other traits from j2
+                      let ind1 = self.id_s
+                            .iter()
+                            .enumerate()
+                            .filter(|(_, &r)| r == self.id_s[j])
+                            .map(|(index, _)| index)
+                            .collect::<Vec<_>>();
+                      let ind2 = self.id_m
+                            .iter()
+                            .enumerate()
+                            .filter(|(_, &r)| r == self.id_m[j2])
+                            .map(|(index, _)| index)
+                            .collect::<Vec<_>>();
+                      let ind3 = self.id_r
+                            .iter()
+                            .enumerate()
+                            .filter(|(_, &r)| r == self.id_r[j2])
+                            .map(|(index, _)| index)
+                            .collect::<Vec<_>>();
 
-                    let j3 = ind3.intersect(ind1.intersect(ind2))[0];// SHOULD ONLY HAPPEN ONCE**
-                    dy[k*self.nstrain+j3] += self.rho; // add new strain
+                      let j3 = ind3.intersect(ind1.intersect(ind2))[0];// SHOULD ONLY HAPPEN ONCE**
+                      dy[k*self.nstrain+j3] += self.rho; // add new strain
                   }
                 }
+                // potential gain or loss of resistance locus
+                if self.id_r[j] == 0 {
+                  if self.id_r[j2] == 1 {// can gain
+                     let gain_locus = trans_gain_dist.sample(&mut rand::thread_rng());
+                      if gain_locus {
+                      // add new strain
+                      let ind1 = self.id_s
+                            .iter()
+                            .enumerate()
+                            .filter(|(_, &r)| r == self.id_s[j])
+                            .map(|(index, _)| index)
+                            .collect::<Vec<_>>();
+                      let ind2 = self.id_m
+                            .iter()
+                            .enumerate()
+                            .filter(|(_, &r)| r == self.id_m[j])
+                            .map(|(index, _)| index)
+                            .collect::<Vec<_>>();
+                      let ind3 = self.id_r
+                            .iter()
+                            .enumerate()
+                            .filter(|(_, &r)| r == 1)
+                            .map(|(index, _)| index)
+                            .collect::<Vec<_>>();
+
+                      let j3 = ind3.intersect(ind1.intersect(ind2))[0];
+                      dy[k*self.nstrain+j3] += self.rho; // add new strain
+                      }
+                    }
+                  } 
+                }
+              }
+            }
+          if self.id_r[j]==1 {//can lose
+            let loss_locus = trans_loss_dist.sample(&mut rand::thread_rng());
+            if loss_locus {
+              // add new strain
+              let ind1 = self.id_s
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, &r)| r == self.id_s[j])
+                    .map(|(index, _)| index)
+                    .collect::<Vec<_>>();
+              let ind2 = self.id_m
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, &r)| r == self.id_m[j])
+                    .map(|(index, _)| index)
+                    .collect::<Vec<_>>();
+              let ind3 = self.id_r
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, &r)| r == 0)
+                    .map(|(index, _)| index)
+                    .collect::<Vec<_>>();
+
+              let j3 = ind3.intersect(ind1.intersect(ind2))[0];
+              dy[k*self.nstrain+j3] += self.rho; // add new strain
               }
             }
           }
@@ -158,7 +226,7 @@ impl ode_event_solvers::System<State> for WhCompetition {
       }
     }
 
-  } 
+
 
 
  fn observer(&self, x: Time, y: &State){// sample strains

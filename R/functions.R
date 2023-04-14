@@ -7,7 +7,7 @@ setup_sim_dir <- function(nstrain, # number of strains
                           strain_id, # nstrain x1 array of strain ids 
                           A, # nstrain x 1 array of antigenic types (integer-values starting at 1)
                           G, # nstrain x 1 array of gpscs (integer-values starting at 1)
-                          O,  # nstrain x 1 array of accessory types (integer-values)
+                          R,  # nstrain x 1 array of res types (binary values)
                           V, # nstrain x 1 array of vaccine types (*BY SERO*)
                           init, # initial strains (binary values init or not)
                           t_max, # max simulation time
@@ -29,8 +29,8 @@ setup_sim_dir <- function(nstrain, # number of strains
   if (!(length(G)==nstrain)){
     stop("Check dimensions of G")
   }
-  if (!(length(O)==nstrain)){
-    stop("Check dimensions of O")
+  if (!(length(R)==nstrain)){
+    stop("Check dimensions of R")
   } 
   if (!(length(V)==nstrain)){
     stop("Check dimensions of V")
@@ -38,7 +38,7 @@ setup_sim_dir <- function(nstrain, # number of strains
   # ------SETUP-------#
   write_constant_pars(nstrain=nstrain,nhost=nhost,t_max=t_max,t_vax=t_vax,
     eps_x=eps_x, eps_a=eps_a, rho=rho,theta=theta,beta=beta, t_g=t_g, t_l=t_l)
-  write_strain_pars(nstrain=nstrain,strain_id=strain_id,A=A, G=G, O=O, V=V, init=init)
+  write_strain_pars(nstrain=nstrain,strain_id=strain_id,A=A, G=G, R=R, V=V, init=init)
 }
 
 ## Run for a single host
@@ -116,20 +116,20 @@ run_one_host <- function(nstrain,
 # main model simulation function
 # ASSUME: being called from working directoy
 # with access to const_pars and strain_pars
-run_simulations <- function(sc_file, sero_file, ag_file, niter,label="None"){
+run_simulations <- function(sc_file, sero_file, res_file, niter,label="None"){
   if (!(file.exists(sc_file))){
     "sc parameter file not found"
     return(NULL)
   } else if (!(file.exists(sero_file))){
     "sero parameter file not found"
     return(NULL)
-  } else if (!(file.exists(ag_file))){
-    "ag parameter file not found"
+  } else if (!(file.exists(res_file))){
+    "resistance parameter file not found"
     return(NULL)
   } else {
     sim <- function(iter) {
          tmp <- paste0("tmp_out_", iter, ".csv")
-         system(paste(multiabm, sc_file, sero_file, ag_file, ">", tmp), wait=TRUE)
+         system(paste(multiabm, sc_file, sero_file, res_file, ">", tmp), wait=TRUE)
          res <- read.csv(tmp, header=FALSE)
          names(res) <- c("time", paste("strain", seq(1:(length(names(res))-1))))
          res$iter <- iter
@@ -141,7 +141,7 @@ run_simulations <- function(sc_file, sero_file, ag_file, niter,label="None"){
        ~ sim(.x),   
        .progress=TRUE) 
     res$label <- label
-
+    message(paste("Finished run", label))
     return(res)
   }
 }
@@ -178,8 +178,8 @@ plot_trajectories <- function(dat, plot_by="strain", with_total=FALSE, plot_rel_
         summarize(y=sum(y)) %>%
         group_by(id_s,time,label) %>%
         summarize(p50 = quantile(y, prob=0.5),
-            p05 = quantile(y, prob=0.25),
-            p95 = quantile(y, prob=0.75))
+            p05 = quantile(y, prob=0.05),
+            p95 = quantile(y, prob=0.95))
    dat$id_s <- factor(dat$id_s)
     gg <- ggplot(dat, aes(x=time/365))+
           geom_line(aes(y=p50, col=id_s, group=id_s), size=1.5)+
@@ -193,8 +193,8 @@ plot_trajectories <- function(dat, plot_by="strain", with_total=FALSE, plot_rel_
         summarize(y=sum(y)) %>%
         group_by(id_r,time,label) %>%
         summarize(p50 = quantile(y, prob=0.5),
-            p05 = quantile(y, prob=0.25),
-            p95 = quantile(y, prob=0.75))
+            p05 = quantile(y, prob=0.05),
+            p95 = quantile(y, prob=0.95))
    dat$id_r <- factor(dat$id_r)
     gg <- ggplot(dat, aes(x=time/365))+
           geom_line(aes(y=p50, col=id_r, group=id_r), size=1.5)+
@@ -205,8 +205,8 @@ plot_trajectories <- function(dat, plot_by="strain", with_total=FALSE, plot_rel_
     gg <- dat %>%
       group_by(id, time,label) %>%
       summarize(p50 = quantile(y, prob=0.5),
-          p05 = quantile(y, prob=0.25),
-          p95 = quantile(y, prob=0.75)) %>%
+          p05 = quantile(y, prob=0.05),
+          p95 = quantile(y, prob=0.95)) %>%
       ggplot(aes(x=time/365))+
         geom_line(aes(y=p50, col=id), size=1.5)+
         geom_ribbon(aes(ymin=p05, ymax=p95, fill=id), alpha=0.3)+
@@ -219,8 +219,8 @@ plot_trajectories <- function(dat, plot_by="strain", with_total=FALSE, plot_rel_
         summarize(tot_freq=sum(freq)) %>%
         group_by(time,label) %>%
         summarize(p50 = quantile(tot_freq, prob=0.5),
-            p05 = quantile(tot_freq, prob=0.25),
-            p95 = quantile(tot_freq, prob=0.75))
+            p05 = quantile(tot_freq, prob=0.05),
+            p95 = quantile(tot_freq, prob=0.95))
       gg <- gg + 
         geom_line(data=dat, aes(x=time/365, y=p50), size=1.5, linetype="dashed")
     }
@@ -320,10 +320,12 @@ write_constant_pars <- function(nstrain, # number of strains
     write.table(const_pars, "const_pars.csv", row.names=FALSE, sep=",")
 }
 
-write_ag_pars <- function(kappa, #nsero x 1 array 
-                            fname){
-  # Note: multiabm_samplestrains takes fname_sero as its 3rd argument
-  write.table(kappa, fname, row.names=FALSE, col.names=FALSE, sep=",") 
+write_res_pars <- function(p_tau, # treatment coverage (pop level)
+                           cost_res, # wh growth cost of resistance
+                           tau, # wh treatment rate
+                           fname_res="res_pars.csv"){#default name for res_pars
+  # Note: multiabm_samplestrains takes fname_res as its 2nd argument
+  write.table(t(c(p_tau, cost_res,tau)), fname_res, row.names=FALSE, col.names=FALSE, sep=",") 
 }
 
 write_sc_pars <- function(kappa, #nsero x 1 array 
@@ -342,11 +344,11 @@ write_strain_pars <- function(nstrain,
                               strain_id,
                               A,
                               G,
-                              O,
+                              R,
                               V,
                               init){
   # Check that 
-  strain_pars <- data.frame(id_m=G, id_s=A, id_o=O, id_v=V, id_init=init)
+  strain_pars <- data.frame(id_m=G, id_s=A, id_r=R, id_v=V, id_init=init)
   # Note: multiabm_samplestrains will look for a file called "strain_pars.csv" in working directory
   write.table(strain_pars, "strain_pars.csv", row.names=FALSE, sep=",")
 }

@@ -71,35 +71,37 @@ impl SCParameters {
       df
     }
 }
-
 #[derive(Deserialize, Debug)]
-struct AGParameters {
-  kappa_o: Vec<f64>,
+struct ResParameters {
+  p_tau: f64,
+  cost_res: f64,
+  tau: f64,
 }
 
 
-impl AGParameters {
+impl ResParameters {
   fn new() -> Self {
-    AGParameters {
-      kappa_o: Vec::new(),
+    ResParameters {
+      p_tau: 0.0,
+      cost_res: 0.0,
+      tau: 0.0,
     }
   }
 
-  fn push(&mut self, row: &csv::StringRecord) {
-      self.kappa_o.push(row[0].parse().unwrap());
+  fn read_csv(filepath: &str) -> Self {
+    let mut rdr = csv::ReaderBuilder::new()
+      .has_headers(false)
+      .from_path(filepath).unwrap();
+    let mut df = ResParameters::new();
+    let header = csv::StringRecord::from(vec![
+       "p_tau", "cost_res", "tau",
+    ]);
+    for result in rdr.records() {
+      df = result.unwrap().deserialize(Some(&header)).unwrap();
     }
-
-    fn read_csv(filepath: &str) -> Self {// no header
-      let mut rdr = csv::ReaderBuilder::new()
-        .has_headers(false).from_path(filepath).unwrap();
-      let mut df = AGParameters::new();
-      for result in rdr.records() {
-        df.push(&result.unwrap());
-      }
-      df
-    }
+    df
+  }
 }
-
 
 #[derive(Deserialize, Debug)]
 struct ConstParameters {
@@ -152,7 +154,7 @@ struct StrainParameters {
   id_m: Vec<u64>,
   id_s: Vec<u64>,
   id_v: Vec<u64>,
-  id_o: Vec<u64>,
+  id_r: Vec<u64>,
   id_init: Vec<u64>,
 }
 
@@ -162,7 +164,7 @@ impl StrainParameters {
       id_m: Vec::new(),
       id_s: Vec::new(),
       id_v: Vec::new(),
-      id_o: Vec::new(),
+      id_r: Vec::new(),
       id_init: Vec::new(),
      }
   }
@@ -170,7 +172,7 @@ impl StrainParameters {
   fn push(&mut self, row: &csv::StringRecord) {
     self.id_m.push(row[0].parse().unwrap());
     self.id_s.push(row[1].parse().unwrap());
-    self.id_o.push(row[2].parse().unwrap());
+    self.id_r.push(row[2].parse().unwrap());
     self.id_v.push(row[3].parse().unwrap());
     self.id_init.push(row[4].parse().unwrap());
   }
@@ -194,7 +196,7 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     let sc_pars  = SCParameters::read_csv(&args[1]); //FNAME
     let sero_pars  = SeroParameters::read_csv(&args[2]); //FNAME
-    let ag_pars  = AGParameters::read_csv(&args[3]); //FNAME
+    let res_pars  = ResParameters::read_csv(&args[3]); //FNAME
 
     // Initial state.   
     let mut y0 = State::from_vec(vec![0.0; pars.nhost*pars.nstrain*2]);
@@ -202,8 +204,12 @@ fn main() {
     let mut i0 = 50_f64/(pars.nhost as f64); // high
     if i0 > 1.0 {i0 = 1.0;} // sample prob per host per strain
     let init_infect_dist = Bernoulli::new(i0).unwrap();
+    let treat_dist = Bernoulli::new(res_pars.p_tau).unwrap();
+    let mut init_on_treat = vec![false; pars.nhost];
 
     for k in 0..pars.nhost {
+      // pick hosts to initially be treated
+      init_on_treat[k] = treat_dist.sample(&mut rand::thread_rng());  
       // pick hosts to be initially infected
       for j in 0..pars.nstrain {
         if strain_pars.id_init[j] == 1{
@@ -219,8 +225,9 @@ fn main() {
     for j in 0..pars.nstrain {
       let s = strain_pars.id_m[j]-1;
       kappa_vec[j] += sc_pars.kappa_m[s as usize];
-      let s = strain_pars.id_o[j]-1;
-      kappa_vec[j] += ag_pars.kappa_o[s as usize];
+      if strain_pars.id_r[j] == 1 {
+        kappa_vec[j] = (1.0-res_pars.cost_res)*kappa_vec[j];
+      }
     }
     let mut alpha_vec = vec![0.0; pars.nstrain];
     for j in 0..pars.nstrain {
@@ -233,6 +240,7 @@ fn main() {
       nhost: pars.nhost, 
       nstrain: pars.nstrain,
       theta: pars.theta,
+      tau: res_pars.tau,
       eps_x: pars.eps_x,
       eps_a: pars.eps_a,
       rho: pars.rho,
@@ -240,8 +248,10 @@ fn main() {
       kappa: kappa_vec.clone(),
       id_m: strain_pars.id_m,
       id_s: strain_pars.id_s,
-      id_o: strain_pars.id_o,
+      id_r: strain_pars.id_r,
       beta: pars.beta,
+      p_treat: treat_dist,
+      on_treat: init_on_treat,
       t_g: pars.t_g,
       t_l: pars.t_l,
     }; 

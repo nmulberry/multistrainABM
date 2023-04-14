@@ -1,5 +1,5 @@
 packages <- c("tidyverse", "deSolve", "reshape2", "ggpubr", "RColorBrewer", "viridis",
-  "ggridges","igraph") 
+  "ggridges","igraph", "furrr", "wesanderson") 
 
 for (p in packages){
   if (!(p %in% installed.packages())){
@@ -16,9 +16,10 @@ library(viridis)
 library(ggridges)
 library(igraph)
 library(data.table) 
+library(wesanderson)
 source('functions.R')
 # furrr options
-no_cores <- availableCores() 
+no_cores <- availableCores()-1
 plan(multicore, workers = no_cores)
 ##make output dir
 out_dir <- "./figures"
