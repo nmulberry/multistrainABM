@@ -1,13 +1,16 @@
-#############################
-# SIMPLE EXAMPLE ON USING MODEL
-#############################
-source("setup.R")
+###############################
+# CODE FOR GENERATING FIGURE 4
+# Run 2 ATs, 2 MTs
+# AT1 is VT
+# vary growth rates dependent on MT,
+# and robustness dependent on AT
+# and observe resulting associations
+#################################
+
 
 sc_file <- "sc_pars.csv"
 sero_file <- "sero_pars.csv"
 res_file <- "res_pars.csv" 
-
-NITER <- 20
 
 
 run_over_pars <- function(a, k){
@@ -20,10 +23,10 @@ run_over_pars <- function(a, k){
 
 t_max <- 30*365
 t_vax <- 15*365
-# init = c(0,1,0,0,0,0,0,1)
+
 setup_sim_dir(
   nstrain=4, 
-  nhost=5000, 
+  nhost=NHOST, 
   strain_id=c(1,2,3,4), 
   A=c(1,1,2,2), 
   G=c(1,2,1,2), 
@@ -42,19 +45,48 @@ kappa1 <- c(1.1, 1.15, 1.2)
 
 params <- expand.grid(a=alpha2, k=kappa1)
 
-model_res <- params %>%
-  pmap_dfr(run_over_pars)
 
-p1 <- plot_trajectories(model_res,plot_rel_freq=FALSE)+
+
+if (load_data) {
+  if (file.exists(paste0(data_dir, "/fig-4-data.RDS"))) {
+    message("loading data for fig 4")
+    model_res <- readRDS(paste0(data_dir, "/fig-4-data.RDS"))
+    } else {
+    message("could not load data for fig 4")
+    model_res <- params %>%
+      pmap_dfr(run_over_pars)
+    }
+  } else {
+  model_res <- params %>%
+    pmap_dfr(run_over_pars)
+}
+
+if (save_data){
+  saveRDS(model_res, paste0(data_dir, "/fig-4-data.RDS"))
+}
+
+
+
+##############################
+# --------PLOTS -------------
+###############################
+model_res2 <- filter(model_res, label %in% c("0.022,1.1", "0.022,1.2"))
+
+model_res2 <- model_res2 %>% mutate(
+  label=case_when(label=="0.022,1.1" ~ "(a) No growth differences",
+    TRUE ~ "(b) MT1 >> MT2"))
+p1 <- plot_trajectories(model_res2,plot_rel_freq=FALSE)+
   labs(x="Time (yrs)", y="Prevalence", col="")+
   theme(
-    strip.background = element_blank(),
-    strip.text.x = element_blank(),
+   # strip.background = element_blank(),
+   # strip.text.x = element_blank(),
  # panel.border = element_rect(colour = "black", fill=NA, size=3),
-  plot.margin = margin(2,1,1,2, "cm")
+#  plot.margin = margin(2,1,1,2, "cm")
   )+
-  scale_color_manual(values=wes_palette("Moonrise2"), labels=c('AT1MT1', 'AT1MT2', 'AT2MT1', 'AT2MT2'))+
-  scale_fill_manual(values=wes_palette("Moonrise2"))
+  scale_color_manual(values=wes_palette("Moonrise2"), labels=c('AT1-MT1', 'AT1-MT2', 'AT2-MT1', 'AT2-MT2'))+
+  scale_fill_manual(values=wes_palette("Moonrise2"))+
+  scale_x_continuous(breaks=c(t_vax/365), label="Vaccination")
+
 
 
 ##summarize
@@ -86,7 +118,7 @@ g1 <- ggplot(dat, aes(x=id_m, y=id_s, fill=freq, col=freq))+
   scale_x_discrete(expand=c(0,0))+
   guides(fill=guide_colourbar(barwidth=12, ticks=FALSE,title.position = "top"), color="none")+
   labs(x="", y="", fill="Pre-vax median freq ")+
-  theme(
+  theme(plot.margin = margin(1,1,1,1, "cm"),
     strip.background = element_blank(),
     strip.text.x = element_blank()
   )+scale_color_viridis()+scale_fill_viridis()
@@ -108,20 +140,22 @@ dat2 <- model_res %>%
 
 dat2$kappa1 <- as.factor(dat2$kappa1)
 dat2$a2 <- factor(dat2$a2, levels=c(0.03, 0.025, 0.022))
+
+
 g2 <- ggplot(dat2, aes(x=kappa1, y=a2, fill=p_emerg, col=p_emerg))+
   geom_tile()+ 
-  scale_y_discrete(expand=c(0,0))+
-  scale_x_discrete(expand=c(0,0))+
+  scale_y_discrete(expand=c(0,0), labels=c("","",""))+
+  scale_x_discrete(expand=c(0,0), labels=c("","",""))+
   guides(fill=guide_colourbar(barwidth=12, ticks=FALSE,title.position = "top"), color="none")+
-  labs(y=expression(alpha[2]), x=expression(kappa[1]), fill="Post-vax emergence of AT2MT2 ")+
-  theme(
+  labs(y="", x="", fill="Post-vax emergence of AT2MT1 ")+
+  theme(plot.margin = margin(1,1,1,1, "cm"),
     strip.background = element_blank(),
-    strip.text.x = element_blank()
+    strip.text.x = element_blank(),
   )+scale_color_viridis()+scale_fill_viridis()
 
-gg <- ggarrange(plotlist=list(g1,g2),labels=c("B","C"),  font.label=c(size=20))
-ggarrange(plotlist=list(p1,gg), nrow=2, labels=c("A",""),  font.label=c(size=20))
-#ggsave("run_2sero_2meta_both_init1001.pdf", height=10, width=8)
+gg <- ggarrange(plotlist=list(g1,g2), font.label=c(size=20))
+ggarrange(plotlist=list(p1,gg), nrow=2, labels=c("A","B"),  font.label=c(size=20))
+ggsave(paste0(out_dir, "/run_2sero_2meta_both_init1001.pdf"), height=10, width=8)
 
 
 

@@ -21,9 +21,6 @@ source('functions.R')
 # furrr options
 no_cores <- availableCores()-1
 plan(multicore, workers = no_cores)
-##make output dir
-out_dir <- "./figures"
-dir.create(out_dir, showWarnings = FALSE)
 
 # ggplot style
 tsize <- 16
@@ -36,15 +33,13 @@ theme_set(theme_light(base_size = tsize)+
      ),
     ))
 lsize <- tsize
+
+# some colour palettes
 sens_res_pal <- c("strain 2"="#E69F00","strain 1"="#56B4E9")
 vax_pal <- c("#FEE0B6", "#8073AC")
+freq_pal <- c("PREPCV"="#e5b8ab","POSTPCV"="#972D15")
 
-## Model defn
-multiabm <- "~/multistrainABM/target/release/multiabm_samplestrains"
-
-
-
-## R model for illustrating wh dynamics only
+## R model for illustrating within host dynamics only
 withinhost_model <- function(time,state,parameters){
    with(as.list(c(state, parameters)), {      
     #-------DEs----------#
@@ -75,4 +70,5 @@ withinhost_model <- function(time,state,parameters){
 return(list(c(dx, da)))
   })
 }
+
 

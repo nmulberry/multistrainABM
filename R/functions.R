@@ -45,7 +45,7 @@ setup_sim_dir <- function(nstrain, # number of strains
 # to illustrate wh dynamics
 run_one_host <- function(nstrain, 
                           strain_id, # nstrain x1 array of strain ids 
-                          st, # nstrain x 1 array of serotypes (integer-values)
+                          st, # nstrain x 1 array of antigenic types (integer-values)
                           rt, # nstrain x 1 array of resistant types (binary-values)
                           mt,  # nstrain x 1 array of metabolic types (integer-values)
                           vt, # nstrain x 1 array of vaccine types (*BY SERO*)

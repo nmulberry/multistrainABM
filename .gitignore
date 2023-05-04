@@ -1,6 +1,6 @@
 Cargo.lock
 R/tmp/*
-R/*.pdf
-R/*.RDS
-R/*.csv
+*.pdf
+*.RDS
+*.csv
 /target/
