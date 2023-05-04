@@ -1,6 +1,7 @@
 [package]
 name = "multiabm"
 version = "0.0.1"
+autobins = false
 
 [[bin]]
 name="multiabm_samplestrains"
@@ -20,5 +21,6 @@ rand_distr= "0.4.3"
 rand="0.8.5"
 ode_event_solvers = { path= "../ode-event-solvers" }
 rand_pcg = "0.3.1"
+array_tool= "1.0.3"
 
 

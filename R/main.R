@@ -1,73 +1,41 @@
-source("setup.R")
-out_dir <- "figures-main/" # output directory for figures
-dir.create(out_dir, showWarnings=FALSE)
+source("setup.R") 
 
-# set some default parameters
-NHOST <- 10000 #per strain default ---> bump to 10k ?
-ALPHA = 0.03
-P_TAU = 0.4
-COST = 0.15
-TAU=0.35
-T_MAX = 15*365
-T_VAX=10*365
+
+###############################
+# -----OPTIONS--------
+###############################
+
+# Path to model binary
+multiabm <- "~/multistrainABM/target/release/multiabm_samplestrains"
+
+# Whether or not to load generated data (if exists), or run all simulations 
+# Note: some simulations may take a while to run
+load_data <- TRUE
+
+# If running, save or not
+save_data <- TRUE
+
+# If saving, specify directory
+data_dir <- "./generated-data"
+dir.create(data_dir, showWarnings = FALSE)
+
+# Output directory (figures)
+out_dir <- "./figures"
+dir.create(out_dir, showWarnings = FALSE)
+
+#############################
+#-- MAIN SIMULATIONS-------
+#############################
+
+## Figure 3
+source("withinhost-illustration.R") # pretty quick to run, no need to save data
+
+# Rest of main figs
 NITER <- no_cores*3
-BETA <- 0.1
-MU <- 0.0
-dir.create("tmp", showWarnings=FALSE) #for storing temp files
-#--------------------------#
-#--------------------------#
-# Main Experiments & Results
-#--------------------------#
-#--------------------------#
+NHOST <- 7000
+# these ones take a while, may not want to run locally
+#source("figure-4.R") 
 
-#############################
-# RUN NEUTRALITY ANALYSIS
-############################
-setwd("tmp")
-source("../neutrality.R")
-setwd("../")
-ggsave(paste0(out_dir, "neutrality_analysis.pdf"), gg_neutral, height=9, width=11)
+#source("figure-5.R") 
 
-#############################
-# RUN WITHINHOST ILLUSTRATIONS
-##############################
-setwd("tmp")
-source("../withinhost.R")
-setwd("../")
-ggsave(paste0(out_dir, "sens-res-main-fig.pdf"), gg_res, height=10, width=11)
-
-#########################
-# RUN COEXISTENCE
-#########################
-setwd("tmp")
-source("../coexistence.R")
-setwd("../")
-ggsave(paste0(out_dir, "sens_res_coex.pdf"),gg_res, height=8, width=12)
-ggsave(paste0(out_dir, "sens_res_coex_alpha.pdf"),gg_res_alpha, height=8, width=12)
-#########################
-# RUN VACCINATION ANALYSIS
-#########################
-
-
-setwd("tmp")
-source("../2strain-vax.R")
-setwd("../")
-ggsave(paste0(out_dir, "2strain_vax.pdf"), gg_2strainvax, width=8, height=8)
-ggsave(paste0(out_dir, "2strain_vax_traj.pdf"), gg_traj, width=8, height=8)
-ggsave(paste0(out_dir, "2strain_vax_freqs.pdf"), gg_freqs, width=8, height=10)
-###
-setwd("tmp")
-source("../3strain-vax.R")
-setwd("../")
-ggsave(paste0(out_dir, "3strain_vax.pdf"), gg_3strainvax, width=8, height=8)
-ggsave(paste0(out_dir, "3strain_vax_freqs.pdf"), gg_freqs, width=8, height=10)
-
-### Some trajectories too
-setwd("tmp")
-source("../vims_trajectories.R")
-setwd("../")
-ggsave(paste0(out_dir, "vims-toy.pdf"), gg_traj, height=10, width=10)
-unlink("tmp", recursive=TRUE)
-
-
-
+source("figure-6.R")
